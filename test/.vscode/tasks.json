@@ -1,0 +1,93 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install Dependencies (JavaScript)",
+      "type": "shell",
+      "command": "npm install",
+      "options": {
+        "cwd": "${workspaceFolder}/javascript"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Host Tunnel (json - .NET)",
+      "type": "devtunnel",
+      "tunnelType": "persistent",
+      "tunnelId": "my-web-app-dotnet",
+      "port": 5000,
+      "access": "anonymous",
+      "envFilePath": "dotnet/appsettings.Development.json",
+      "envUrlVariable": "DevTunnelUrl",
+      "isBackground": true,
+      "problemMatcher": "$devtunnel-host"
+    },
+    {
+      "label": "Host Tunnel (dotenv - javascript)",
+      "type": "devtunnel",
+      "tunnelType": "persistent",
+      "tunnelId": "my-web-app-javascript",
+      "port": 3000,
+      "access": "anonymous",
+      "envFilePath": "javascript/.env",
+      "isBackground": true,
+      "problemMatcher": "$devtunnel-host"
+    },
+    {
+      "label": "Stop All Tunnels",
+      "type": "devtunnel",
+      "operation": "stop",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop .NET Tunnel",
+      "type": "devtunnel",
+      "operation": "stop",
+      "tunnelId": "my-web-app-dotnet",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop JavaScript Tunnel",
+      "type": "devtunnel",
+      "operation": "stop",
+      "tunnelId": "my-web-app-javascript",
+      "problemMatcher": []
+    },
+    {
+        "label": "build",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "build",
+            "${workspaceFolder}/dotnet/dotnet-test-app.csproj",
+            "/property:GenerateFullPaths=true",
+            "/consoleloggerparameters:NoSummary;ForceNoAlign"
+        ],
+        "problemMatcher": "$msCompile"
+    },
+    {
+        "label": "publish",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "publish",
+            "${workspaceFolder}/dotnet/dotnet-test-app.csproj",
+            "/property:GenerateFullPaths=true",
+            "/consoleloggerparameters:NoSummary;ForceNoAlign"
+        ],
+        "problemMatcher": "$msCompile"
+    },
+    {
+        "label": "watch",
+        "command": "dotnet",
+        "type": "process",
+        "args": [
+            "watch",
+            "run",
+            "--project",
+            "${workspaceFolder}/dotnet/dotnet-test-app.csproj"
+        ],
+        "problemMatcher": "$msCompile"
+    }
+  ]
+}

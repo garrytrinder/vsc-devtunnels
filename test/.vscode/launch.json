@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET (json)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "${workspaceFolder}/dotnet/dotnet-test-app.csproj"],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Host Tunnel (json - .NET)",
+      "postDebugTask": "Stop .NET Tunnel"
+    },
+    {
+      "name": "JavaScript (dotenv)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/javascript/app.js",
+      "console": "integratedTerminal",
+      "preLaunchTask": "Host Tunnel (dotenv - javascript)",
+      "postDebugTask": "Stop JavaScript Tunnel"
+    }
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "name": "vsc-devtunnels",
+  "displayName": "Dev Tunnels",
+  "description": "Manage Dev Tunnels directly from VS Code — install, authenticate, host, and stop tunnels with full F5 integration.",
+  "version": "0.1.0",
+  "publisher": "garrytrinder",
+  "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://github.com/garrytrinder/vsc-devtunnels/blob/main/README.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/garrytrinder/vsc-devtunnels.git"
+  },
+  "preview": true,
+  "pricing": "Free",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onTaskType:devtunnel"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "devtunnels.showVersionStatus",
+        "title": "Dev Tunnels: Show Version Status"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "devtunnel",
+        "required": [],
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "host",
+              "stop"
+            ],
+            "default": "host",
+            "description": "The operation to perform. Defaults to 'host'. Set to 'stop' to terminate a running tunnel."
+          },
+          "tunnelType": {
+            "type": "string",
+            "enum": [
+              "temporary",
+              "persistent"
+            ],
+            "default": "temporary",
+            "description": "Tunnel lifecycle. 'temporary' creates a tunnel that dies on stop. 'persistent' reuses a named tunnel across sessions (requires 'tunnelId')."
+          },
+          "tunnelId": {
+            "type": "string",
+            "description": "ID of the tunnel. Required when tunnelType is 'persistent'. Used by 'stop' to target a specific tunnel."
+          },
+          "port": {
+            "type": "number",
+            "description": "Port number to tunnel."
+          },
+          "access": {
+            "description": "Access control for the tunnel. 'anonymous' allows anyone, 'tenant' restricts to your Entra tenant, or { \"org\": \"name\" } restricts to a GitHub org.",
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "anonymous",
+                  "tenant"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "org": {
+                    "type": "string",
+                    "description": "GitHub organization name."
+                  }
+                },
+                "required": [
+                  "org"
+                ]
+              }
+            ]
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "http",
+              "https"
+            ],
+            "description": "Protocol for the tunneled port.",
+            "default": "auto"
+          },
+          "expiration": {
+            "type": "string",
+            "enum": [
+              "1h",
+              "2h",
+              "4h",
+              "8h",
+              "1d",
+              "2d",
+              "7d",
+              "14d",
+              "30d"
+            ],
+            "description": "Tunnel expiration time. Min 1h, max 30d."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description to add to the tunnel."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Labels to add to the tunnel for searching."
+          },
+          "hostHeader": {
+            "type": "string",
+            "description": "Host header value to rewrite in forwarded requests. Use 'unchanged' to keep the original."
+          },
+          "originHeader": {
+            "type": "string",
+            "description": "Origin header value to rewrite in forwarded requests. Use 'unchanged' to keep the original."
+          },
+          "requestTimeout": {
+            "type": "number",
+            "description": "Timeout in seconds for forwarded web requests. 0 to disable. Useful when debugging slow endpoints."
+          },
+          "envFilePath": {
+            "type": "string",
+            "description": "Relative path to a .env or .json file to write the tunnel URL to. Format is inferred from the file extension."
+          },
+          "envUrlVariable": {
+            "type": "string",
+            "description": "Name of the variable for the tunnel URL written to the env file. Defaults to 'DEVTUNNEL_URL' for dotenv and 'DevTunnelUrl' for JSON."
+          }
+        }
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "devtunnel-host",
+        "label": "Dev Tunnel Host",
+        "owner": "devtunnel",
+        "pattern": [
+          {
+            "regexp": "^never match this( )(.*)$",
+            "kind": "file",
+            "file": 1,
+            "message": 2
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Connecting to host tunnel relay",
+          "endsPattern": "^Ready to accept connections"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Dev Tunnels",
+      "properties": {
+        "devtunnels.cliPath": {
+          "type": "string",
+          "default": "devtunnel",
+          "description": "Path to the devtunnel CLI executable."
+        },
+        "devtunnels.authMethod": {
+          "type": "string",
+          "enum": ["browser", "deviceCode"],
+          "default": "browser",
+          "enumDescriptions": [
+            "Opens a browser window to complete authentication.",
+            "Displays a device code in the terminal for authentication on another device."
+          ],
+          "description": "Authentication method used when logging in via the CLI."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.0"
+  }
+}
