@@ -2,7 +2,7 @@
   "name": "vsc-devtunnels",
   "displayName": "Dev Tunnels",
   "description": "Manage Dev Tunnels directly from VS Code — install, authenticate, host, and stop tunnels with full F5 integration.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "garrytrinder",
   "license": "MIT",
   "icon": "icon.png",

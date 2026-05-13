@@ -142,6 +142,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
         // Add port to the tunnel
         if (this.definition.port !== undefined) {
             await this.addPort(tunnelId, this.definition.port);
+            await this.updatePort(tunnelId, this.definition.port);
         }
 
         // Set access control
@@ -163,6 +164,29 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             if (!msg.includes('already exists') && !msg.includes('conflict')) {
                 this.writeEmitter.fire(`Warning: Could not add port ${port}: ${message}\r\n`);
             }
+        }
+    }
+
+    private async updatePort(tunnelId: string, port: number): Promise<void> {
+        // Apply port-level options (e.g. --host-header) via `port update`. The
+        // tunnel relay reads these settings from the port, not from the host
+        // command, so for persistent tunnels they must be set here.
+        const updateArgs: string[] = [];
+
+        if (this.definition.hostHeader) {
+            updateArgs.push('--host-header', this.definition.hostHeader);
+        }
+
+        if (updateArgs.length === 0) {
+            return;
+        }
+
+        try {
+            await this.cli.exec(['port', 'update', tunnelId, '-p', port.toString(), ...updateArgs]);
+            this.writeEmitter.fire(`Port ${port} settings updated.\r\n`);
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : String(e);
+            this.writeEmitter.fire(`Warning: Could not update port ${port} settings: ${message}\r\n`);
         }
     }
 
