@@ -121,15 +121,57 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
         await this.startTunnel();
     }
 
+    private static isTokenExpiredError(e: unknown): boolean {
+        const message = (e instanceof Error ? e.message : String(e)).toLowerCase();
+        return message.includes('token expired');
+    }
+
+    /**
+     * Run a CLI command, transparently re-authenticating and retrying once if
+     * the call fails because the user's login token has expired. The CLI's
+     * `user show` command can report the user as logged in even when the
+     * cached token is no longer valid for tunnel operations, so per-call
+     * recovery is needed here in addition to the host-process retry.
+     */
+    private async execWithReauth(args: string[]): Promise<string> {
+        try {
+            return await this.cli.exec(args);
+        } catch (e: unknown) {
+            if (!DevTunnelHostTerminal.isTokenExpiredError(e)) {
+                throw e;
+            }
+
+            this.writeEmitter.fire('\r\nLogin token expired. Re-authenticating...\r\n');
+            this.outputChannel.appendLine('[Tunnel] Token expired, attempting re-auth');
+
+            const loggedIn = await this.auth.ensureLoggedIn();
+            if (!loggedIn) {
+                throw new Error('Re-authentication failed.');
+            }
+
+            this.writeEmitter.fire('Re-authenticated. Retrying...\r\n');
+            return this.cli.exec(args);
+        }
+    }
+
     private async ensureTunnelExists(tunnelId: string): Promise<boolean> {
         try {
-            await this.cli.exec(['show', tunnelId]);
+            await this.execWithReauth(['show', tunnelId]);
             this.writeEmitter.fire(`Tunnel ${tunnelId} found.\r\n`);
-        } catch {
+        } catch (showError: unknown) {
+            // `show` failing usually means the tunnel doesn't exist, but it
+            // may also fail because re-authentication failed during retry.
+            if (DevTunnelHostTerminal.isTokenExpiredError(showError)) {
+                const message = showError instanceof Error ? showError.message : String(showError);
+                this.writeEmitter.fire(`Error: ${message}\r\n`);
+                this.outputChannel.appendLine(`[Tunnel] ${message}`);
+                return false;
+            }
+
             this.writeEmitter.fire(`Tunnel ${tunnelId} not found. Creating...\r\n`);
             this.outputChannel.appendLine(`[Tunnel] Creating persistent tunnel: ${tunnelId}`);
             try {
-                await this.cli.exec(['create', tunnelId]);
+                await this.execWithReauth(['create', tunnelId]);
                 this.writeEmitter.fire(`Tunnel ${tunnelId} created.\r\n`);
             } catch (e: unknown) {
                 const message = e instanceof Error ? e.message : String(e);
@@ -156,7 +198,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             if (this.definition.protocol && this.definition.protocol !== 'auto') {
                 portArgs.push('--protocol', this.definition.protocol);
             }
-            await this.cli.exec(portArgs);
+            await this.execWithReauth(portArgs);
             this.writeEmitter.fire(`Port ${port} added to tunnel.\r\n`);
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
@@ -182,7 +224,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
         }
 
         try {
-            await this.cli.exec(['port', 'update', tunnelId, '-p', port.toString(), ...updateArgs]);
+            await this.execWithReauth(['port', 'update', tunnelId, '-p', port.toString(), ...updateArgs]);
             this.writeEmitter.fire(`Port ${port} settings updated.\r\n`);
         } catch (e: unknown) {
             const message = e instanceof Error ? e.message : String(e);
@@ -198,11 +240,11 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
 
         try {
             if (access === 'anonymous') {
-                await this.cli.exec(['access', 'create', tunnelId, '-a']);
+                await this.execWithReauth(['access', 'create', tunnelId, '-a']);
             } else if (access === 'tenant') {
-                await this.cli.exec(['access', 'create', tunnelId, '-t']);
+                await this.execWithReauth(['access', 'create', tunnelId, '-t']);
             } else if (typeof access === 'object' && access.org) {
-                await this.cli.exec(['access', 'create', tunnelId, '-o', access.org]);
+                await this.execWithReauth(['access', 'create', tunnelId, '-o', access.org]);
             }
         } catch {
             // Access may already be set
@@ -242,7 +284,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             this.outputChannel.appendLine(`[Tunnel] Process exited with code ${code}`);
 
             // Detect expired token and retry once after re-auth
-            if (code !== 0 && !isRetry && stderrOutput.toLowerCase().includes('token expired')) {
+            if (code !== 0 && !isRetry && DevTunnelHostTerminal.isTokenExpiredError(new Error(stderrOutput))) {
                 this.writeEmitter.fire('\r\nLogin token expired. Re-authenticating...\r\n');
                 this.outputChannel.appendLine('[Tunnel] Token expired, attempting re-auth');
 
