@@ -7,9 +7,13 @@ export class AuthManager {
 
     constructor(private cli: DevTunnelsCli) {}
 
-    async ensureLoggedIn(): Promise<boolean> {
-        if (await this.cli.isLoggedIn()) {
+    async ensureLoggedIn(force = false): Promise<boolean> {
+        if (!force && await this.cli.isLoggedIn()) {
             return true;
+        }
+
+        if (force) {
+            await this.cli.logout();
         }
 
         // Pick a provider and do interactive login via terminal
