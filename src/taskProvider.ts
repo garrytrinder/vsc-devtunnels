@@ -121,9 +121,16 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
         await this.startTunnel();
     }
 
+    private static readonly REAUTH_FAILED_MESSAGE = 'Re-authentication failed.';
+
     private static isTokenExpiredError(e: unknown): boolean {
         const message = (e instanceof Error ? e.message : String(e)).toLowerCase();
         return message.includes('token expired');
+    }
+
+    private static isReauthFailedError(e: unknown): boolean {
+        const message = e instanceof Error ? e.message : String(e);
+        return message === DevTunnelHostTerminal.REAUTH_FAILED_MESSAGE;
     }
 
     /**
@@ -146,7 +153,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
 
             const loggedIn = await this.auth.ensureLoggedIn();
             if (!loggedIn) {
-                throw new Error('Re-authentication failed.');
+                throw new Error(DevTunnelHostTerminal.REAUTH_FAILED_MESSAGE);
             }
 
             this.writeEmitter.fire('Re-authenticated. Retrying...\r\n');
@@ -159,9 +166,10 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             await this.execWithReauth(['show', tunnelId]);
             this.writeEmitter.fire(`Tunnel ${tunnelId} found.\r\n`);
         } catch (showError: unknown) {
-            // `show` failing usually means the tunnel doesn't exist, but it
-            // may also fail because re-authentication failed during retry.
-            if (DevTunnelHostTerminal.isTokenExpiredError(showError)) {
+            // `show` failing usually means the tunnel doesn't exist. If
+            // re-authentication failed during the wrapped retry, surface that
+            // instead of trying to create a tunnel we can't authenticate for.
+            if (DevTunnelHostTerminal.isReauthFailedError(showError)) {
                 const message = showError instanceof Error ? showError.message : String(showError);
                 this.writeEmitter.fire(`Error: ${message}\r\n`);
                 this.outputChannel.appendLine(`[Tunnel] ${message}`);
@@ -284,7 +292,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             this.outputChannel.appendLine(`[Tunnel] Process exited with code ${code}`);
 
             // Detect expired token and retry once after re-auth
-            if (code !== 0 && !isRetry && DevTunnelHostTerminal.isTokenExpiredError(new Error(stderrOutput))) {
+            if (code !== 0 && !isRetry && DevTunnelHostTerminal.isTokenExpiredError(stderrOutput)) {
                 this.writeEmitter.fire('\r\nLogin token expired. Re-authenticating...\r\n');
                 this.outputChannel.appendLine('[Tunnel] Token expired, attempting re-auth');
 
