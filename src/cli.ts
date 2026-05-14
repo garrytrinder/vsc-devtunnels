@@ -103,6 +103,14 @@ export class DevTunnelsCli {
         }
     }
 
+    async logout(): Promise<void> {
+        try {
+            await this.exec(['user', 'logout']);
+        } catch {
+            // Already logged out — ignore
+        }
+    }
+
     exec(args: string[], options?: { timeout?: number }): Promise<string> {
         const cliPath = this.getCliPath();
         return this.execCommand(cliPath, args, options?.timeout);

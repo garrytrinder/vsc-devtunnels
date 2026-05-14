@@ -151,7 +151,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
             this.writeEmitter.fire('\r\nLogin token expired. Re-authenticating...\r\n');
             this.outputChannel.appendLine('[Tunnel] Token expired, attempting re-auth');
 
-            const loggedIn = await this.auth.ensureLoggedIn();
+            const loggedIn = await this.auth.ensureLoggedIn(true);
             if (!loggedIn) {
                 throw new Error(DevTunnelHostTerminal.REAUTH_FAILED_MESSAGE);
             }
@@ -296,7 +296,7 @@ class DevTunnelHostTerminal implements vscode.Pseudoterminal {
                 this.writeEmitter.fire('\r\nLogin token expired. Re-authenticating...\r\n');
                 this.outputChannel.appendLine('[Tunnel] Token expired, attempting re-auth');
 
-                const loggedIn = await this.auth.ensureLoggedIn();
+                const loggedIn = await this.auth.ensureLoggedIn(true);
                 if (loggedIn) {
                     this.writeEmitter.fire('Re-authenticated. Retrying tunnel...\r\n\r\n');
                     await this.startTunnel(true);
